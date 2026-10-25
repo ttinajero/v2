@@ -161,7 +161,10 @@ export function createProgression(game) {
       for (const sp of SPECIES) {
         const found = save.album[sp.id];
         const card = el('div', `album-card ${found ? '' : 'unknown'}`, list);
-        card.innerHTML = found ? `<strong>${sp.name}</strong><p>${sp.fact}</p>` : '<strong>???</strong><p>Not found yet. Keep exploring!</p>';
+        if (sp.legend) card.classList.add('legend');
+        card.innerHTML = found
+          ? `<strong>${sp.legend ? 'Legend · ' : ''}${sp.name}</strong><p>${sp.fact}</p>`
+          : `<strong>???</strong><p>${sp.legend ? 'A legend of the night sea… keep your eyes open after dark.' : 'Not found yet. Keep exploring!'}</p>`;
       }
     }
 

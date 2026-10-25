@@ -292,6 +292,32 @@ export function createAudio(game) {
     fail() {
       [67, 63, 60].forEach((n, i) => tone({ freq: midi(n), type: 'triangle', peak: 0.16, decay: 0.4, delay: i * 0.18, bus: musicBus }));
     },
+    // Short warning sting when something dangerous appears.
+    danger() {
+      [52, 51].forEach((n, i) => tone({ freq: midi(n), type: 'sawtooth', peak: 0.12, attack: 0.02, decay: 0.5, delay: i * 0.35, bus: musicBus }));
+    },
+    // Deep rumble for the sea monster.
+    rumble(intensity = 1) {
+      noiseHit({ freq: 120, peak: 0.5 * intensity, attack: 0.6, decay: 2.5 });
+      tone({ freq: 42, to: 30, type: 'sine', peak: 0.5 * intensity, attack: 0.5, decay: 2.5 });
+      tone({ freq: 63, to: 47, type: 'triangle', peak: 0.15 * intensity, attack: 0.8, decay: 2, vibrato: 3 });
+    },
+    // Eerie choir for ghosts and the ghost ship.
+    spooky() {
+      [57, 60, 63].forEach((n, i) => tone({ freq: midi(n), type: 'sine', peak: 0.07, attack: 1.2, decay: 3, delay: i * 0.25, vibrato: 4, bus: musicBus }));
+    },
+    giggle() {
+      [0, 0.12, 0.24].forEach((d, i) => tone({ freq: 900 + i * 120, to: 1300 + i * 120, type: 'sine', peak: 0.08, attack: 0.01, decay: 0.09, delay: d }));
+    },
+    // A wordless, wavering siren song.
+    sirenSong() {
+      [69, 72, 76, 74, 72].forEach((n, i) => tone({ freq: midi(n), type: 'sine', peak: 0.08, attack: 0.25, decay: 0.7, delay: i * 0.45, vibrato: 8, bus: musicBus }));
+    },
+    // Crackly radio when a boat calls for backup.
+    radio() {
+      noiseHit({ type: 'bandpass', freq: 1800, q: 4, peak: 0.25, attack: 0.02, decay: 0.6 });
+      [0, 0.2, 0.4].forEach((d) => tone({ freq: 1200, type: 'square', peak: 0.05, decay: 0.08, delay: d }));
+    },
     fanfare() {
       [60, 64, 67, 72, 67, 72].forEach((n, i) => tone({ freq: midi(n), type: 'square', peak: 0.08, decay: 0.3, delay: i * 0.13, bus: musicBus }));
     },

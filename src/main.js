@@ -25,6 +25,8 @@ import { createFamily } from './family.js';
 import { createProgression } from './progression.js';
 import { createAudio } from './audio.js';
 import { createTutorial } from './tutorial.js';
+import { createUpdates } from './updates.js';
+import { createEvents } from './events.js';
 import { speciesById } from './species.js';
 import { water } from './materials.js';
 import { loadingStep, loadingReady, loadingFailed } from './loading.js';
@@ -109,7 +111,12 @@ const hud = createHud({
   onMap: () => hud.toggleBigMap(),
   onPause: () => game.started && !modalOpen() && openPause(game),
   onProfile: () => game.openProfile?.(),
+  onClock: () => {
+    game.timeScale = game.timeScale === 2 ? 1 : 2;
+    hud.showToast(game.timeScale === 2 ? 'Time ×2: days and nights go by twice as fast' : 'Time back to normal');
+  },
 });
+game.timeScale = 1;
 game.hud = hud;
 const touch = createTouchControls(input, chase);
 game.touch = touch;
@@ -126,7 +133,7 @@ game.discover = (id) => {
   game.onAlbum?.(id);
 };
 
-game.addSystem(createFish(game));
+game.fish = game.addSystem(createFish(game));
 game.animals = game.addSystem(createAnimals(game));
 const audio = game.addSystem(createAudio(game));
 game.audio = audio;
@@ -155,6 +162,7 @@ const boats = game.addSystem(createBoats(game));
 game.boats = boats;
 const missions = game.addSystem(createMissions(game));
 game.missions = missions;
+game.events = game.addSystem(createEvents(game));
 const tutorial = game.addSystem(createTutorial(game));
 game.tutorial = tutorial;
 game.missionInfo = () => missions.info() || tutorial.info();
@@ -235,9 +243,9 @@ game.addSystem({
 
 // --- Ocean panel (advanced, hidden by default) ---
 const params = {
-  hour: 16,
-  cycle: false,
-  cycleSpeed: 0.25, // in-game hours per real second
+  hour: save.hour ?? 9,
+  cycle: true,
+  cycleSpeed: 0.02, // in-game hours per real second: a full day lasts 20 minutes
   waveSpeed: 1,
   chop: 0.85,
   scale: 1,
@@ -351,12 +359,19 @@ function applyDay() {
   sun.target.position.copy(controller.position);
   hemi.color.copy(colors.zenith).lerp(colors.horizon, 0.5);
   hemi.groundColor.copy(colors.deep);
-  hemi.intensity = 1.1;
+  hemi.intensity = 1.1 + day.night * 0.9; // moonlit nights stay readable
 
   orca.uniforms.uWaterColor.value.copy(colors.deep).multiplyScalar(0.7);
   water.uWaterColor.value.copy(orca.uniforms.uWaterColor.value);
   spray.uniforms.uColor.value.copy(colors.foam).multiplyScalar(0.5 + day.lightIntensity * 0.45);
   game.onDay?.(day);
+
+  // Nightfall and dawn announcements.
+  const isNight = day.night > 0.6;
+  if (game.started && isNight !== game.isNight) {
+    hud.showToast(isNight ? 'Night is falling… the sea gets dangerous.' : 'The sun is rising. Good morning, guardian!', 4);
+  }
+  game.isNight = isNight;
 }
 
 const PHYSICS_DT = 1 / 120;
@@ -441,6 +456,13 @@ function collectMarkers() {
   return markers;
 }
 
+// The most urgent on-screen alert from any system (shark swarm, boat calling for help…).
+function collectAlert() {
+  const alerts = [];
+  for (const sys of game.systems) sys.alerts?.(alerts);
+  return alerts[0] || null;
+}
+
 function handleGlobalKeys() {
   if (!game.started) return;
   if (input.pressedAlways('pause') && !modalOpen()) openPause(game);
@@ -455,9 +477,16 @@ function frame() {
   const dt = Math.min(frameDt, 0.1);
   quality.update(frameDt);
   handleGlobalKeys();
-  if (params.cycle && !game.paused) params.hour = (params.hour + dt * params.cycleSpeed) % 24;
+  if (params.cycle && !game.paused) {
+    params.hour = (params.hour + dt * params.cycleSpeed * game.timeScale) % 24;
+    // Remember the time of day now and then (not every frame: it writes storage).
+    if (Math.floor(game.time / 30) !== Math.floor((game.time - dt) / 30)) {
+      save.hour = params.hour;
+      game.persist();
+    }
+  }
 
-  waves.chop = params.chop;
+  waves.chop = params.chop + (game.extraChop || 0); // events (the sea monster) can stir the sea
   waves.scale = params.scale;
   waves.fadeOrigin.copy(camera.position);
 
@@ -492,6 +521,11 @@ function frame() {
     warningText: game.started ? boundaryWarning() : '',
     missionInfo: game.missionInfo?.() || null,
     actionLabel: interact.label,
+    hour: params.hour,
+    night: game.isNight,
+    timeScale: game.timeScale,
+    alert: collectAlert(),
+    bossBar: game.systems.reduce((found, sys) => found || sys.bossBar?.() || null, null),
     touchMode: document.body.classList.contains('touch-mode'),
   });
 
@@ -503,7 +537,7 @@ function frame() {
   ocean.mesh.position.set(camera.position.x, 0, camera.position.z);
   sky.uniforms.uTime.value = game.time;
   sky.mesh.position.copy(camera.position);
-  renderer.toneMappingExposure = params.exposure;
+  renderer.toneMappingExposure = params.exposure * (1 + 0.3 * (game.day?.night || 0)) * (1 - 0.45 * (game.gloom || 0));
   applyDay();
 
   input.endFrame();
@@ -534,6 +568,7 @@ try {
   }
   game.started = true;
   syncInput();
+  game.updates = createUpdates(game);
 } catch (error) {
   loadingFailed(error);
 }

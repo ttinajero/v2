@@ -13,6 +13,8 @@ const MARKER_STYLE = {
   hub: { color: '#7fb4ff', size: 6 },
   friend: { color: '#6dffb0', size: 3 },
   animal: { color: '#c9d6dc', size: 2.5 },
+  danger: { color: '#ff3b3b', size: 5 },
+  mystery: { color: '#b98cff', size: 7 },
 };
 
 function bar(parent, icon, cls) {
@@ -24,7 +26,7 @@ function bar(parent, icon, cls) {
 }
 
 // Survival bars, readouts, mission panel, action prompt, minimap, full map and toasts.
-export function createHud({ onMap, onPause, onProfile }) {
+export function createHud({ onMap, onPause, onProfile, onClock }) {
   const root = el('div', 'hud', document.body);
 
   const top = el('div', 'hud-topbar', root);
@@ -45,6 +47,11 @@ export function createHud({ onMap, onPause, onProfile }) {
   const energy = bar(stats, ICONS.bolt, 'energy');
   const air = bar(stats, ICONS.bubble, 'air');
   const readout = el('div', 'hud-readout', stats);
+  // Tapping the clock toggles the day/night speed between normal and ×2.
+  const clock = el('button', 'hud-clock', root);
+  clock.type = 'button';
+  clock.title = 'Tap to change time speed';
+  clock.addEventListener('click', () => onClock?.());
 
   const mission = el('div', 'hud-mission', root);
   const missionTitle = el('div', 'hud-mission-title', mission);
@@ -56,6 +63,10 @@ export function createHud({ onMap, onPause, onProfile }) {
   const big = el('canvas', 'hud-bigmap', root);
   const toast = el('div', 'hud-toast', root);
   const warning = el('div', 'hud-warning', root);
+  const alertEl = el('div', 'hud-alert', root);
+  const boss = el('div', 'hud-boss', root);
+  const bossName = el('div', 'hud-boss-name', boss);
+  const bossFill = el('div', 'hud-boss-fill', el('div', 'hud-boss-track', boss));
   const vignette = el('div', 'hud-damage', root);
   let bigOpen = false;
   let toastTimer = 0;
@@ -114,7 +125,20 @@ export function createHud({ onMap, onPause, onProfile }) {
 
     ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
     const pulse = 0.5 + 0.5 * Math.sin(mapTime * 4);
+    // Danger corridors (shark swarms): wide red bands.
     for (const m of markers) {
+      if (m.type !== 'stripe') continue;
+      ctx.strokeStyle = `rgba(255, 50, 50, ${0.3 + pulse * 0.25})`;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = Math.max(6, m.width * s);
+      ctx.beginPath();
+      ctx.moveTo(toX(m.x1), toY(m.z1));
+      ctx.lineTo(toX(m.x2), toY(m.z2));
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    for (const m of markers) {
+      if (m.type === 'stripe') continue;
       if (m.type === 'animal' && !full && metersAcross > 900) continue;
       const style = MARKER_STYLE[m.type] || MARKER_STYLE.buoy;
       let x = toX(m.x);
@@ -135,7 +159,16 @@ export function createHud({ onMap, onPause, onProfile }) {
         ctx.stroke();
       }
       ctx.beginPath();
-      if (m.type === 'boat') {
+      if (m.type === 'mystery') {
+        // A glowing question mark.
+        ctx.arc(x, y, style.size + pulse * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px ui-sans-serif, system-ui, sans-serif';
+        ctx.fillText('?', x - 3, y + 4);
+        ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+        ctx.beginPath();
+      } else if (m.type === 'boat') {
         ctx.rect(x - 4, y - 4, 8, 8);
       } else if (m.type === 'hub') {
         ctx.moveTo(x, y - 7);
@@ -181,8 +214,22 @@ export function createHud({ onMap, onPause, onProfile }) {
     b.row.classList.toggle('low', value < lowAt);
   }
 
-  function update(dt, { orca, markers, warningText, missionInfo, actionLabel, touchMode }) {
+  function update(dt, { orca, markers, warningText, missionInfo, actionLabel, touchMode, hour = 12, night = false, timeScale = 1, alert = null, bossBar = null }) {
+    alertEl.textContent = alert || '';
+    alertEl.classList.toggle('show', !!alert);
+    boss.classList.toggle('show', !!bossBar);
+    if (bossBar) {
+      bossName.textContent = bossBar.name;
+      bossFill.style.width = `${Math.max(0, Math.min(1, bossBar.value)) * 100}%`;
+    }
     mapTime += dt;
+    const h = Math.floor(hour);
+    const m = Math.floor((hour - h) * 60 / 10) * 10;
+    const clockHtml = `${night ? ICONS.moon : ICONS.sun}<span>${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}</span>${timeScale > 1 ? `<b>×${timeScale}</b>` : ''}`;
+    if (clock.innerHTML !== clockHtml) clock.innerHTML = clockHtml;
+    clock.classList.toggle('night', night);
+    clock.classList.toggle('fast', timeScale > 1);
+    clock.setAttribute('aria-label', `Time ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}, speed ×${timeScale}. Tap to change`);
     setBar(health, orca.health / orca.maxHealth, 0.3);
     setBar(energy, orca.energy / orca.maxEnergy, 0.2);
     setBar(air, orca.breath, 0.25);

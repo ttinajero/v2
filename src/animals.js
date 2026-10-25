@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createDolphin, createShark, createTurtle, createSeal, createWhale, animateCreature } from './models.js';
 import { WORLD_HALF } from './world.js';
+import { createDangerIcon, updateDangerIcon, attackDepth } from './events/common.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
@@ -152,6 +153,8 @@ export function createAnimals(game) {
     Array.from({ length: 2 }, (_, i) => {
       const s = new Creature(game, createShark(), { x: zone.x + (i ? 20 : -20), z: zone.z, depth: 2.5, speed: 2.5, turnRate: 1.4 });
       s.zone = zone;
+      s.icon = createDangerIcon();
+      game.scene.add(s.icon);
       s.state = 'patrol';
       s.scared = 0;
       s.biteCooldown = 0;
@@ -312,7 +315,7 @@ export function createAnimals(game) {
         s.state = 'chase';
         s.steerTo(orca.x, orca.z, dt, 1.8);
         s.targetSpeed = dist < 8 ? 3 : 5.5;
-        s.targetDepth = THREE.MathUtils.clamp(controller.surfaceY - orca.y, 0.8, 20);
+        s.targetDepth = attackDepth(controller);
         if (dist < 4.5 && s.biteCooldown === 0) {
           if (controller.damage(8, 'shark')) game.hud.showToast('A shark bit you! Tail slap to scare it away');
           s.biteCooldown = 3;
@@ -331,6 +334,7 @@ export function createAnimals(game) {
         game.hud.showToast('The shark swims away!');
         game.emit?.({ type: 'sharkScared', shark: s });
       }
+      updateDangerIcon(game, s.icon, s.position, s.state === 'chase' && dist < 70);
       if (near) {
         s.move(dt, s.state === 'patrol' ? 0.4 : 0.9);
         sight('shark', s, 35);

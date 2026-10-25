@@ -43,8 +43,8 @@ const fragmentShader = /* glsl */ `
 
     // Moon and stars fade in at night.
     float md = dot(d, uMoonDir);
-    col += vec3(0.85, 0.92, 1.0) * smoothstep(0.9990, 0.9993, md) * 1.6 * uNight;
-    col += vec3(0.5, 0.6, 0.8) * pow(max(md, 0.0), 120.0) * 0.25 * uNight;
+    col += vec3(0.92, 0.96, 1.0) * smoothstep(0.9978, 0.9983, md) * 2.2 * uNight;
+    col += vec3(0.5, 0.6, 0.8) * pow(max(md, 0.0), 60.0) * 0.45 * uNight;
 
     vec3 cell = floor(d * 280.0);
     float star = step(0.9965, hash3(cell));

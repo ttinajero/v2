@@ -2,15 +2,15 @@ import * as THREE from 'three';
 
 // Muted, slightly eerie palettes in the spirit of DREDGE.
 const KEYS = [
-  { hour: 0, deep: '#071420', shallow: '#173a46', horizon: '#18283a', zenith: '#03080f', sun: '#8fb0d0', foam: '#56707e' },
-  { hour: 5, deep: '#08131f', shallow: '#1a3a46', horizon: '#3a4a5e', zenith: '#0b1424', sun: '#8fb0d0', foam: '#7a8e9a' },
+  { hour: 0, deep: '#0f2636', shallow: '#2a5a6e', horizon: '#2c4664', zenith: '#0b1730', sun: '#c4d8f4', foam: '#8ea6b6' },
+  { hour: 5, deep: '#122a3c', shallow: '#2e5c6e', horizon: '#46586e', zenith: '#122036', sun: '#c4d8f4', foam: '#94a8b4' },
   { hour: 6.5, deep: '#152536', shallow: '#4f6a72', horizon: '#e8a17a', zenith: '#33476b', sun: '#ffb68a', foam: '#f2ddd0' },
   { hour: 9, deep: '#0c3a42', shallow: '#2b8585', horizon: '#a9cfcb', zenith: '#4a89a8', sun: '#fff2d8', foam: '#eef6f2' },
   { hour: 15, deep: '#0c3a42', shallow: '#2f8a86', horizon: '#b4d3c9', zenith: '#4d8aa6', sun: '#fff0d2', foam: '#eef6f2' },
   { hour: 18, deep: '#1c2c48', shallow: '#5a6488', horizon: '#f4aa62', zenith: '#4a5c88', sun: '#ffa868', foam: '#f6dcc4' },
   { hour: 19.5, deep: '#142034', shallow: '#33445c', horizon: '#7a5262', zenith: '#18213c', sun: '#d89070', foam: '#c8bcc4' },
-  { hour: 21, deep: '#071420', shallow: '#173a46', horizon: '#18283a', zenith: '#03080f', sun: '#8fb0d0', foam: '#56707e' },
-  { hour: 24, deep: '#071420', shallow: '#173a46', horizon: '#18283a', zenith: '#03080f', sun: '#8fb0d0', foam: '#56707e' },
+  { hour: 21, deep: '#0f2636', shallow: '#2a5a6e', horizon: '#2c4664', zenith: '#0b1730', sun: '#c4d8f4', foam: '#8ea6b6' },
+  { hour: 24, deep: '#0f2636', shallow: '#2a5a6e', horizon: '#2c4664', zenith: '#0b1730', sun: '#c4d8f4', foam: '#8ea6b6' },
 ];
 
 const FIELDS = ['deep', 'shallow', 'horizon', 'zenith', 'sun', 'foam'];
@@ -38,7 +38,7 @@ export function sampleDay(hour) {
   const moonDir = new THREE.Vector3(-sunDir.x, -sunDir.y, -0.8).normalize();
 
   const sunPower = THREE.MathUtils.smoothstep(sunDir.y, -0.04, 0.2);
-  const moonPower = THREE.MathUtils.smoothstep(moonDir.y, -0.04, 0.2) * 0.35;
+  const moonPower = THREE.MathUtils.smoothstep(moonDir.y, -0.04, 0.2) * 0.8; // a bright full moon
   const night = 1 - THREE.MathUtils.smoothstep(sunDir.y, -0.15, 0.05);
   const useSun = sunPower >= moonPower;
 

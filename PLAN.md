@@ -1,5 +1,7 @@
 # Plan del juego de la orca
 
+> Versión actual: **1.1** · Siguiente actualización: ver [PLAN-1.1.md](PLAN-1.1.md) (eventos, peligros y noches misteriosas, ✅ completada).
+
 Juego web en three.js para un niño de 10 años: una orca que protege el océano de barcos furtivos, rescata animales y explora un mapa.
 
 - **Idioma:** el juego está en **inglés**; este plan y la documentación interna, en español.

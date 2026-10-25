@@ -88,6 +88,8 @@ export function openFaint(game, onContinue) {
     boat: 'That boat hit you hard.',
     propeller: 'Propellers are dangerous! Stay away from the back of boats.',
     shark: 'The sharks got the better of you this time.',
+    greatwhite: 'The great white was too strong this time. Fleeing is smart too!',
+    whirlpool: 'The whirlpool pulled you under. Sprint away from the middle next time!',
   }[game.lastDamageSource] || 'You got hurt too much.';
   openModal({
     title: 'You fainted!',

@@ -174,6 +174,17 @@ export function createFish(game) {
     }
   }
 
+  // Moves `count` schools (the farthest ones) right next to a spot: a giant bait ball.
+  function gather(x, z, count) {
+    const p = controller.position;
+    const sorted = [...schools].sort((a, b) => Math.hypot(b.center.x - p.x, b.center.z - p.z) - Math.hypot(a.center.x - p.x, a.center.z - p.z));
+    sorted.slice(0, count).forEach((s, i) => {
+      placeSchool(s, false);
+      s.center.x = x + Math.cos(i * 2.1) * 8;
+      s.center.z = z + Math.sin(i * 2.1) * 8;
+    });
+  }
+
   game.fishTarget = () => {
     const p = controller.position;
     let best = null;
@@ -190,6 +201,7 @@ export function createFish(game) {
 
   return {
     update,
+    gather,
     markers(out) {
       for (const s of schools) if (s.alive >= 6) out.push({ x: s.center.x, z: s.center.z, type: 'animal' });
     },

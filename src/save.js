@@ -27,6 +27,8 @@ function defaults() {
     friends: 0, // dolphins rescued that now follow
     tutorialDone: false,
     started: false,
+    hour: 9, // time of day, kept between sessions
+    seenMessages: [], // ids of content.json announcements already shown
     settings: { ...DEFAULT_SETTINGS },
   };
 }

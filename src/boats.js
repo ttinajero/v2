@@ -7,6 +7,8 @@ import { WORLD_HALF } from './world.js';
 const rand = (a, b) => a + Math.random() * (b - a);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const ORCA_R = 1.1;
+const ALERT_TIME = 40; // seconds before an attacked boat gets backup
+const ESCAPE_DISTANCE = 220;
 
 const TYPES = {
   trawler: { length: 12, width: 4, height: 2.2, speed: 3, turn: 0.25, hull: 0x9a3b2e, stripe: 0xe8e0cc, cabin: 0xe8e0cc, net: true, label: 'Fishing boat' },
@@ -85,6 +87,11 @@ function createBoatModel(type, spec) {
   return { group, crane };
 }
 
+// Just the model of a boat type (used for the ghost pirate ship).
+export function boatModel(type) {
+  return createBoatModel(type, TYPES[type]).group;
+}
+
 class Boat {
   constructor(system, type, opts = {}) {
     const spec = TYPES[type];
@@ -115,6 +122,10 @@ class Boat {
     this.rollKick = 0;
     this.lastHit = -10;
     this.onScared = opts.onScared;
+    this.alert = null; // { time } countdown before the crew radios for backup
+    this.reinforcement = !!opts.reinforcement;
+    this.life = opts.life ?? Infinity; // reinforcements give up after a while
+    this.huntOrca = !!opts.huntOrca;
     this.game.scene.add(this.model);
 
     if (this.spec.net && opts.net !== false) this._makeNet();
@@ -153,6 +164,7 @@ class Boat {
     if (this.spec.friendly || this.fleeing) return;
     // Bosses resist fear, and can be kept from fleeing until their last phase.
     this.fear = Math.min(this.lockFear ? 90 : 100, this.fear + amount * (this.spec.fearResist ?? 1));
+    this.startAlert();
     this.system.onFear?.(this, reason);
     if (this.fear >= 100) {
       this.fleeing = true;
@@ -161,6 +173,14 @@ class Boat {
       this.system.onBoatScared?.(this);
       if (this.net && !this.net.released) this.releaseNet();
     }
+  }
+
+  // Attacking a poacher starts a countdown: beat it, escape, or it calls for backup.
+  startAlert() {
+    if (this.alert || this.reinforcement || this.fleeing || this.spec.friendly || this.type === 'whaler') return;
+    this.alert = { time: ALERT_TIME };
+    this.game.hud.showToast(`The ${this.spec.label.toLowerCase()} is radioing for help! Scare it away or escape!`);
+    this.game.audio?.radio();
   }
 
   releaseNet() {
@@ -172,6 +192,7 @@ class Boat {
 
   cutLine(i) {
     if (!this.net || this.net.cut[i]) return;
+    this.startAlert();
     this.net.cut[i] = true;
     this.net.cables[i].visible = false;
     this.game.spray.splash(this.net.pos.x, this.game.waves.heightAt(this.net.pos.x, this.net.pos.z), this.net.pos.z, 1.5);
@@ -205,6 +226,28 @@ class Boat {
     const spec = this.spec;
     const f = this.forward;
 
+    // --- Backup countdown and giving up ---
+    if (this.alert) {
+      this.alert.time -= dt;
+      const far = Math.hypot(orca.x - this.position.x, orca.z - this.position.z) > ESCAPE_DISTANCE;
+      if (this.fleeing) {
+        this.alert = null;
+      } else if (far) {
+        this.alert = null;
+        game.hud.showToast(`You slipped away from the ${spec.label.toLowerCase()}.`);
+      } else if (this.alert.time <= 0) {
+        this.alert = null;
+        this.system.callBackup(this);
+      }
+    }
+    if (this.reinforcement && !this.fleeing) {
+      this.life -= dt;
+      if (this.life <= 0) {
+        this.fleeing = true; // they give up and head home
+        game.hud.showToast('The backup boats are giving up.');
+      }
+    }
+
     // --- Steering ---
     let targetSpeed = spec.speed;
     if (this.fleeing) {
@@ -215,6 +258,16 @@ class Boat {
       this._steer(ex, ez, dt, spec.turn * 2);
       targetSpeed = Math.max(spec.speed * 2.2, 7);
       if (this.fleeTime > 35 || Math.max(Math.abs(this.position.x), Math.abs(this.position.z)) > WORLD_HALF + 150) this.system.remove(this);
+    } else if (this.huntOrca) {
+      // Hunt the orca but keep a little distance: they want to throw nets, not crash.
+      const d = Math.hypot(orca.x - this.position.x, orca.z - this.position.z);
+      if (d < 25) {
+        const a = Math.atan2(this.position.x - orca.x, this.position.z - orca.z) + 0.9;
+        this._steer(orca.x + Math.sin(a) * 18, orca.z + Math.cos(a) * 18, dt, spec.turn * 1.5);
+        targetSpeed = 4.5;
+      } else {
+        this._steer(orca.x, orca.z, dt, spec.turn);
+      }
     } else if (this.target) {
       const t = this.target.position;
       const dist = Math.hypot(t.x - this.position.x, t.z - this.position.z);
@@ -433,6 +486,39 @@ export function createBoats(game) {
       b.removed = true;
       b.dispose();
       boats.splice(boats.indexOf(b), 1);
+    },
+    callBackup(boat) {
+      const c = game.controller;
+      game.audio?.radio();
+      game.audio?.danger();
+      game.hud.showToast('The crew called for backup! Two speedboats are coming for you!', 4);
+      for (const side of [-1, 1]) {
+        const a = Math.atan2(boat.position.x - c.position.x, boat.position.z - c.position.z) + side * 0.6;
+        system.spawn('speedboat', {
+          x: c.position.x + Math.sin(a) * 140,
+          z: c.position.z + Math.cos(a) * 140,
+          heading: a + Math.PI,
+          reinforcement: true,
+          huntOrca: true,
+          life: 70,
+          spec: { speed: 8 },
+          onScared: () => {
+            game.save.points += 15;
+            game.save.totalPoints += 15;
+            game.persist();
+            game.hud.showToast('Backup boat chased off! +15 points');
+          },
+        });
+      }
+    },
+    alerts(out) {
+      const orca = game.controller.position;
+      for (const b of boats) {
+        if (b.alert) out.push(`${b.spec.label} is calling for help: ${Math.ceil(b.alert.time)}s`);
+      }
+      if (boats.some((b) => b.reinforcement && !b.fleeing && Math.hypot(orca.x - b.position.x, orca.z - b.position.z) < 160)) {
+        out.push('Backup boats are hunting you! Scare them or swim away');
+      }
     },
     throwNet(boat, orca) {
       const mesh = createNet(1.4);

@@ -1,7 +1,7 @@
 {
   "name": "dredge-ocean",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Stylized DREDGE-like ocean simulator in the browser with three.js.",
   "scripts": {

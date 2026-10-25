@@ -1,0 +1,11 @@
+{
+  "events": {
+    "mystery": 1,
+    "sharkStream": 0.45,
+    "greatWhite": 0.3,
+    "apparition": 0.7,
+    "monster": 0.06
+  },
+  "nightDangerMultiplier": 2,
+  "message": null
+}
