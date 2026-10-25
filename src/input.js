@@ -11,7 +11,6 @@ const KEY_ACTIONS = {
   call: ['KeyV'],
   map: ['KeyM'],
   pause: ['Escape', 'KeyP'],
-  panel: ['KeyH'],
 };
 
 const FORWARD_KEYS = ['KeyW', 'ArrowUp'];

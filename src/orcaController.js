@@ -37,6 +37,7 @@ export class OrcaController {
     this.energy = 100;
     this.exhausted = false;
     this.lastDamage = -Infinity;
+    this.superTime = 0; // seconds of super whale mode left
     this.trapped = 0; // seconds stuck in a thrown net
     this.upgrades = { air: 0, speed: 0, strength: 0, energy: 0 };
     this.position = new THREE.Vector3(0, waves.heightAt(0, 0) - 0.77, 0);
@@ -106,12 +107,12 @@ export class OrcaController {
   }
 
   get strength() {
-    return 1 + this.upgrades.strength * 0.25;
+    return (1 + this.upgrades.strength * 0.15) * (this.superTime > 0 ? 1.5 : 1);
   }
 
   setUpgrades(upgrades) {
     Object.assign(this.upgrades, upgrades);
-    this.maxEnergy = 100 + this.upgrades.energy * 20;
+    this.maxEnergy = 100 + this.upgrades.energy * 15;
     this.energy = Math.min(this.energy, this.maxEnergy);
   }
 
@@ -129,7 +130,15 @@ export class OrcaController {
     this.energy = Math.min(this.maxEnergy, this.energy + energy);
   }
 
+  // Super whale (mystery prize): huge jumps, top speed and endless energy for a while.
+  startSuper(seconds = 120) {
+    this.superTime = seconds;
+    this.energy = this.maxEnergy;
+    this.exhausted = false;
+  }
+
   _spend(amount) {
+    if (this.superTime > 0) return;
     this.energy = Math.max(0, this.energy - amount);
     if (this.energy <= 1) this.exhausted = true;
   }
@@ -154,6 +163,10 @@ export class OrcaController {
   step(dt) {
     const { waves, input, position: p, velocity: v } = this;
     this.time += dt;
+    if (this.superTime > 0) {
+      this.superTime = Math.max(0, this.superTime - dt);
+      if (this.superTime === 0) this.events.push({ type: 'superEnd' });
+    }
     this.behaviorTime += dt;
     this._updateAxes();
     const flat = this._flat;
@@ -272,7 +285,7 @@ export class OrcaController {
     // --- Roll: bank into turns, rock with the swell, spin when steering mid-air ---
     const prevRoll = this.roll;
     if (inAir) {
-      this.roll += turn * 2.4 * dt;
+      this.roll += turn * 4.2 * dt; // fast enough for a full spin in one jump
     } else {
       if (prevSub < 0.05) this.roll = wrapAngle(this.roll);
       const bank = -this.yawRate * THREE.MathUtils.clamp(fwdSpeed / 6, 0, 1) * 0.28;
@@ -286,18 +299,25 @@ export class OrcaController {
     const fwd = this.forward;
 
     // --- Forces ---
-    const power = 1 + this.upgrades.speed * 0.1;
+    const superMode = this.superTime > 0;
+    const upgradePower = 1 + this.upgrades.speed * 0.06;
+    const power = upgradePower * (superMode ? 1.9 : 1);
     let thrust = 0;
     if (forwardKey) thrust = (sprint ? SPRINT_THRUST : CRUISE_THRUST * forwardAmt) * power;
     else if (backKey) thrust = -2.5;
     if (this.exhausted) thrust = Math.min(thrust, CRUISE_THRUST * 0.7);
     if (this.breath < 0.15 && depth > 1.5) thrust = Math.max(thrust, CRUISE_THRUST);
     if (behavior === 'spyhop' || behavior === 'tailslap' || trapped) thrust = 0;
-    if (behavior === 'jump') thrust = SPRINT_THRUST * (bt < 0.45 ? 1.2 : 2.4) * power;
+    if (behavior === 'jump') {
+      // Capped launch speed keeps jumps consistent even when starting deep.
+      const cap = superMode ? 15.5 : 11;
+      thrust = fwdSpeed > cap ? 0 : SPRINT_THRUST * (bt < 0.45 ? 1.2 : 2.4) * upgradePower * (superMode ? 1.5 : 1);
+    }
     thrust *= tailSub * (0.5 + 0.5 * sub); // flukes push less once the body leaves the water
     this.thrust = thrust;
 
-    v.y += (-G + G * BUOYANCY * sub) * dt;
+    // Super whales hang in the air much longer.
+    v.y += (-G * (superMode && sub === 0 ? 0.7 : 1) + G * BUOYANCY * sub) * dt;
     if (behavior === 'spyhop') {
       // Sculling with flukes and flippers holds the head up out of the water.
       v.y = damp(v.y, (hC - 0.6 - p.y) * 2.5, 6, dt);
@@ -342,7 +362,7 @@ export class OrcaController {
       this.breath = Math.min(1, this.breath + dt / 3);
     } else {
       this.underTime += dt;
-      this.breath = Math.max(0, this.breath - dt / (BREATH_SECONDS * (1 + this.upgrades.air * 0.25)));
+      this.breath = Math.max(0, this.breath - dt / (BREATH_SECONDS * (1 + this.upgrades.air * 0.15)));
       if (this.breath <= 0) this.damage(3, 'air'); // the damage cooldown spaces these out
     }
 

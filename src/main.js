@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import GUI from 'lil-gui';
 import { createOcean } from './ocean.js';
 import { createSky } from './sky.js';
 import { sampleDay } from './daycycle.js';
@@ -27,6 +26,7 @@ import { createAudio } from './audio.js';
 import { createTutorial } from './tutorial.js';
 import { createUpdates } from './updates.js';
 import { createEvents } from './events.js';
+import { createTricks } from './tricks.js';
 import { speciesById } from './species.js';
 import { water } from './materials.js';
 import { loadingStep, loadingReady, loadingFailed } from './loading.js';
@@ -163,9 +163,31 @@ game.boats = boats;
 const missions = game.addSystem(createMissions(game));
 game.missions = missions;
 game.events = game.addSystem(createEvents(game));
+game.addSystem(createTricks(game));
 const tutorial = game.addSystem(createTutorial(game));
 game.tutorial = tutorial;
 game.missionInfo = () => missions.info() || tutorial.info();
+
+// Super whale: golden glow and a sparkle trail while it lasts.
+const orcaMaterial = orca.group.children[0].material;
+game.addSystem({
+  update() {
+    const t = controller.superTime;
+    if (t > 0) {
+      orcaMaterial.emissive.setRGB(1, 0.75, 0.2);
+      orcaMaterial.emissiveIntensity = 0.25 + Math.sin(game.time * 6) * 0.1 + (t < 10 ? Math.sin(game.time * 20) * 0.15 : 0);
+      if (Math.random() < 0.6) {
+        const p = controller.position;
+        spray.emit(p.x + (Math.random() - 0.5) * 3, p.y + 0.5, p.z + (Math.random() - 0.5) * 3, 0, 1.5, 0, { size: 0.35, life: 0.8, gravity: -0.4, opacity: 0.9 });
+      }
+    } else if (orcaMaterial.emissiveIntensity !== 0) {
+      orcaMaterial.emissiveIntensity = 0;
+    }
+  },
+  onEvent(e) {
+    if (e.type === 'superEnd') hud.showToast('Super whale mode is over. That was amazing!');
+  },
+});
 
 // The orca's call: family and missions listen for it.
 game.addSystem({
@@ -241,7 +263,7 @@ game.addSystem({
   },
 });
 
-// --- Ocean panel (advanced, hidden by default) ---
+// --- Ocean and time settings (fixed: players cannot change them) ---
 const params = {
   hour: save.hour ?? 9,
   cycle: true,
@@ -256,23 +278,7 @@ const params = {
 };
 game.params = params;
 
-const gui = new GUI({ title: 'Ocean' });
-const fTime = gui.addFolder('Time');
-fTime.add(params, 'hour', 0, 24, 0.01).name('Time of day').listen();
-fTime.add(params, 'cycle').name('Auto cycle');
-fTime.add(params, 'cycleSpeed', 0.02, 2, 0.01).name('Cycle speed');
-const fWaves = gui.addFolder('Waves');
-fWaves.add(params, 'chop', 0, 1.05, 0.01).name('Choppiness');
-fWaves.add(params, 'scale', 0.4, 3, 0.01).name('Size');
-fWaves.add(params, 'waveSpeed', 0, 3, 0.01).name('Speed');
-fWaves.add(params, 'wind', 0, 360, 1).name('Wind direction').onChange((v) => waves.setWind(THREE.MathUtils.degToRad(v)));
-const fSurface = gui.addFolder('Surface');
-fSurface.add(params, 'foam', 0, 1, 0.01).name('Foam');
-fSurface.add(params, 'ripples', 0, 2, 0.01).name('Ripples');
-fSurface.add(params, 'exposure', 0.4, 2, 0.01).name('Exposure');
-gui.hide();
 waves.setWind(THREE.MathUtils.degToRad(params.wind));
-game.toggleOceanPanel = () => gui.show(gui._hidden);
 game.openMainMenu = () => {
   if (confirm('Go back to the main menu? Your progress is saved.')) location.reload();
 };
@@ -456,6 +462,14 @@ function collectMarkers() {
   return markers;
 }
 
+// Alert text, enemy health bar and whether the screen should show danger mode.
+function dangerState() {
+  const alert = collectAlert();
+  const bossBar = game.systems.reduce((found, sys) => found || sys.bossBar?.() || null, null);
+  const danger = game.started && (!!alert || !!bossBar || !!game.dangerNear || controller.trapped > 0 || controller.health < 25);
+  return { alert, bossBar, danger };
+}
+
 // The most urgent on-screen alert from any system (shark swarm, boat calling for help…).
 function collectAlert() {
   const alerts = [];
@@ -467,7 +481,6 @@ function handleGlobalKeys() {
   if (!game.started) return;
   if (input.pressedAlways('pause') && !modalOpen()) openPause(game);
   if (input.pressedAlways('map') && !modalOpen()) hud.toggleBigMap();
-  if (input.pressedAlways('panel')) game.toggleOceanPanel();
 }
 
 function frame() {
@@ -524,8 +537,8 @@ function frame() {
     hour: params.hour,
     night: game.isNight,
     timeScale: game.timeScale,
-    alert: collectAlert(),
-    bossBar: game.systems.reduce((found, sys) => found || sys.bossBar?.() || null, null),
+    ...dangerState(),
+    superTime: controller.superTime,
     touchMode: document.body.classList.contains('touch-mode'),
   });
 

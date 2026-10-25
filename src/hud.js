@@ -68,6 +68,8 @@ export function createHud({ onMap, onPause, onProfile, onClock }) {
   const bossName = el('div', 'hud-boss-name', boss);
   const bossFill = el('div', 'hud-boss-fill', el('div', 'hud-boss-track', boss));
   const vignette = el('div', 'hud-damage', root);
+  const dangerFrame = el('div', 'hud-danger-frame', root);
+  const superChip = el('div', 'hud-super', root);
   let bigOpen = false;
   let toastTimer = 0;
   let damageTimer = 0;
@@ -214,7 +216,14 @@ export function createHud({ onMap, onPause, onProfile, onClock }) {
     b.row.classList.toggle('low', value < lowAt);
   }
 
-  function update(dt, { orca, markers, warningText, missionInfo, actionLabel, touchMode, hour = 12, night = false, timeScale = 1, alert = null, bossBar = null }) {
+  function update(dt, { orca, markers, warningText, missionInfo, actionLabel, touchMode, hour = 12, night = false, timeScale = 1, alert = null, bossBar = null, danger = false, superTime = 0 }) {
+    // Danger mode: a faint red frame around the screen while something threatens the orca.
+    dangerFrame.classList.toggle('show', danger);
+    superChip.classList.toggle('show', superTime > 0);
+    if (superTime > 0) {
+      const s = Math.ceil(superTime);
+      superChip.textContent = `SUPER WHALE ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
     alertEl.textContent = alert || '';
     alertEl.classList.toggle('show', !!alert);
     boss.classList.toggle('show', !!bossBar);

@@ -9,20 +9,25 @@ export const UPGRADES = [
   { id: 'strength', name: 'Power', text: 'Rams, jumps and tail slaps scare boats more.' },
   { id: 'energy', name: 'Stamina', text: 'More energy for sprints and tricks.' },
 ];
-const UPGRADE_COST = [150, 300, 500];
+const UPGRADE_COST = [250, 600, 1200, 2000, 3000];
+const MAX_LEVEL = UPGRADE_COST.length;
 
 export const SKINS = [
   { id: 'classic', name: 'Classic', dark: 0x0b0c0f, mid: 0x5a6168, light: 0xe9eef0, cost: 0 },
-  { id: 'midnight', name: 'Midnight', dark: 0x0d1b3a, mid: 0x3a5a8a, light: 0x9fd0ff, cost: 200 },
-  { id: 'albino', name: 'Snowy', dark: 0xf0e4de, mid: 0xd8bfbf, light: 0xffffff, cost: 400 },
-  { id: 'golden', name: 'Golden Legend', dark: 0x5c3f0c, mid: 0xb08a30, light: 0xffe7a0, cost: 0, rank: 3 },
+  { id: 'midnight', name: 'Midnight', dark: 0x0d1b3a, mid: 0x3a5a8a, light: 0x9fd0ff, cost: 800 },
+  { id: 'albino', name: 'Snowy', dark: 0xf0e4de, mid: 0xd8bfbf, light: 0xffffff, cost: 1600 },
+  { id: 'golden', name: 'Golden Legend', dark: 0x5c3f0c, mid: 0xb08a30, light: 0xffe7a0, cost: 0, rank: 6 },
 ];
 
+// Spread out so reaching the top takes many play sessions.
 export const RANKS = [
   { name: 'Calf', points: 0 },
-  { name: 'Juvenile', points: 300 },
-  { name: 'Hunter', points: 900 },
-  { name: 'Ocean Guardian', points: 2000 },
+  { name: 'Juvenile', points: 800 },
+  { name: 'Explorer', points: 2000 },
+  { name: 'Hunter', points: 4000 },
+  { name: 'Pod Leader', points: 7000 },
+  { name: 'Sea Legend', points: 11000 },
+  { name: 'Ocean Guardian', points: 16000 },
 ];
 
 export function rankIndex(totalPoints) {
@@ -156,12 +161,12 @@ export function createProgression(game) {
         const level = save.upgrades[u.id];
         const row = el('div', 'shop-row', panel);
         const info = el('div', 'shop-info', row);
-        el('div', 'shop-name', info, `${u.name} <span class="pips">${[0, 1, 2].map((i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('')}</span>`);
+        el('div', 'shop-name', info, `${u.name} <span class="pips">${UPGRADE_COST.map((_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('')}</span>`);
         el('div', 'shop-text', info, u.text);
         const cost = UPGRADE_COST[level];
-        const btn = el('button', 'btn btn-small btn-primary', row, level >= 3 ? 'Max' : `${cost}`);
+        const btn = el('button', 'btn btn-small btn-primary', row, level >= MAX_LEVEL ? 'Max' : `${cost}`);
         btn.type = 'button';
-        btn.disabled = level >= 3 || save.points < cost;
+        btn.disabled = level >= MAX_LEVEL || save.points < cost;
         btn.addEventListener('click', () => {
           if (!spend(cost)) return;
           save.upgrades[u.id]++;
@@ -230,7 +235,7 @@ export function createProgression(game) {
         game.onRankUp?.(RANKS[r]);
         openModal({
           title: 'New rank!',
-          body: `<div class="rank-up">${ICONS.star}<strong>${RANKS[r].name}</strong></div><p>You are becoming a legend of the sea.${r === 3 ? ' You unlocked the Golden Legend skin!' : ''}</p>`,
+          body: `<div class="rank-up">${ICONS.star}<strong>${RANKS[r].name}</strong></div><p>You are becoming a legend of the sea.${r === RANKS.length - 1 ? ' You unlocked the Golden Legend skin!' : ''}</p>`,
           className: 'modal-complete',
           buttons: [{ label: 'Hooray!', primary: true }],
         });

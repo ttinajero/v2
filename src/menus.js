@@ -51,9 +51,6 @@ export function openSettings(game) {
       game.applySettings();
     });
   }
-  const advanced = el('button', 'btn btn-small settings-advanced', form, 'Ocean panel (advanced)');
-  advanced.type = 'button';
-  advanced.addEventListener('click', () => game.toggleOceanPanel());
 
   openModal({ title: 'Settings', body: form, className: 'modal-settings' });
 }

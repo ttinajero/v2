@@ -73,6 +73,14 @@ function prize(game, spot) {
   };
 }
 
+// The best prize: two minutes as a super whale.
+function superWhale(game) {
+  game.controller.startSuper(120);
+  game.hud.showToast('SUPER WHALE! For 2 minutes you jump super high and swim super fast!', 5);
+  game.audio?.fanfare();
+  return { update() { this.done = true; } };
+}
+
 function bigSchool(game, spot) {
   game.fish?.gather(spot.x, spot.z, 3);
   game.hud.showToast('A giant school of fish! Time for a feast!');
@@ -216,7 +224,8 @@ export function createMystery(game) {
     const night = game.isNight;
     const dangerWeight = night ? 0.5 : 0.32;
     const r = Math.random();
-    if (r < 0.3) outcome = prize(game, spot);
+    if (r < 0.14) outcome = superWhale(game);
+    else if (r < 0.36) outcome = prize(game, spot);
     else if (r < 1 - dangerWeight) outcome = night ? jellyfish(game, spot) : bigSchool(game, spot);
     else outcome = Math.random() < 0.5 ? createSharkPack(game, spot) : whirlpool(game, spot);
   }
