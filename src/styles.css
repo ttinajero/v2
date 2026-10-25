@@ -1577,3 +1577,22 @@ body.touch-mode .hud-alert {
   outline: 3px solid #fff;
   outline-offset: 2px;
 }
+
+/* ---------- Pod (companions) ---------- */
+
+.pod-intro {
+  color: var(--ink-dim) !important;
+}
+
+.pod-empty {
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+.pod-all {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}

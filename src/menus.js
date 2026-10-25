@@ -75,6 +75,12 @@ export function openPause(game) {
   item(ICONS.profile, 'Profile', () => game.openProfile?.());
   if (game.tutorial?.active) item(ICONS.close, 'Skip tutorial', () => game.tutorial.skip());
   if (game.missions?.active) item(ICONS.close, `Abandon "${game.missions.active.def.title}"`, () => game.missions.abandon());
+  // Quick pod toggle: swim alone, or bring everyone back.
+  const comps = game.family?.companions() || [];
+  if (comps.length) {
+    const anyFollowing = comps.some((c) => game.family.following(c.id));
+    item(ICONS.call, anyFollowing ? 'Swim alone' : 'Call your pod back', () => (anyFollowing ? game.family.restAll() : game.family.callAll()));
+  }
   item(ICONS.gear, 'Settings', () => openSettings(game));
   if (fullscreenSupported()) item(ICONS.fullscreen, 'Fullscreen', toggleFullscreen);
   if (game.openMainMenu) item(ICONS.map, 'Main menu', () => game.openMainMenu());

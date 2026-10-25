@@ -175,7 +175,7 @@ game.addSystem({
     audio.orcaCall();
     // Family members answer, each with their own voice.
     game.family.members.forEach((fo, i) => {
-      if (game.family.found(fo.member.id)) audio.familyReply(0.9 + i * 0.45, 1 / fo.member.scale);
+      if (game.family.following(fo.member.id)) audio.familyReply(0.9 + i * 0.45, 1 / fo.member.scale);
     });
     const c = controller;
     spray.spout(c.position.x + c.forward.x * 1.9, c.surfaceY + 0.4, c.position.z + c.forward.z * 1.9, 0.35);

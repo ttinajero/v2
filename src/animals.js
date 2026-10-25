@@ -203,9 +203,23 @@ export function createAnimals(game) {
 
   function updateFriends(dt) {
     const count = Math.min(save.friends || 0, friends.length);
+    const resting = game.family && !game.family.following('dolphins');
     friends.forEach((d, i) => {
-      d.visible = i < count;
-      if (i >= count) return;
+      if (i >= count) {
+        d.visible = false;
+        return;
+      }
+      if (resting) {
+        // Sent off to rest: swim away, then vanish until called back.
+        if (!d.model.visible) return;
+        d.steerAway(orca.x, orca.z, dt, 2);
+        d.targetSpeed = 7;
+        d.leap = 0;
+        d.move(dt, 0.6);
+        if (d.distanceTo(orca) > 140) d.visible = false;
+        return;
+      }
+      d.visible = true;
       const yaw = controller.yaw;
       const tx = orca.x + Math.cos(yaw) * d.offset.x + Math.sin(yaw) * d.offset.y;
       const tz = orca.z - Math.sin(yaw) * d.offset.x + Math.cos(yaw) * d.offset.y;
@@ -367,7 +381,7 @@ export function createAnimals(game) {
             game.audio?.dolphinWhistle(pod.leader.position);
           }
         }
-        friends.forEach((d, i) => setTimeout(() => (d.jump = 1), i * 150));
+        if (game.family?.following('dolphins')) friends.forEach((d, i) => setTimeout(() => (d.jump = 1), i * 150));
       }
       if (e.type === 'slap' || e.type === 'tailslap') {
         for (const s of sharks) {

@@ -25,6 +25,7 @@ function defaults() {
     album: {}, // species id -> true
     family: [], // ids of family members found
     friends: 0, // dolphins rescued that now follow
+    resting: [], // companions sent away to rest (family ids or 'dolphins')
     tutorialDone: false,
     started: false,
     hour: 9, // time of day, kept between sessions

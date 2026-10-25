@@ -58,6 +58,7 @@ export function createProgression(game) {
     const panel = el('div', 'tab-panel', body);
     const TABS = [
       ['orca', 'My Orca'],
+      ['pod', 'Pod'],
       ['upgrades', 'Upgrades'],
       ['skins', 'Skins'],
       ['album', 'Album'],
@@ -72,7 +73,7 @@ export function createProgression(game) {
     function show(id) {
       buttons.forEach(([bid, b]) => b.classList.toggle('active', bid === id));
       panel.innerHTML = '';
-      ({ orca: renderOrca, upgrades: renderUpgrades, skins: renderSkins, album: renderAlbum })[id]();
+      ({ orca: renderOrca, pod: renderPod, upgrades: renderUpgrades, skins: renderSkins, album: renderAlbum })[id]();
     }
 
     function renderOrca() {
@@ -103,6 +104,49 @@ export function createProgression(game) {
         [ICONS.profile, `${Object.keys(save.album).length}/${SPECIES.length}`, 'animals in album'],
       ].forEach(([icon, value, label]) => {
         el('div', 'stat', stats, `${icon}<strong>${value}</strong><span>${label}</span>`);
+      });
+    }
+
+    // Companions: send each one to rest (swim alone) or call them back.
+    function renderPod() {
+      const family = game.family;
+      const list = family.companions();
+      if (!list.length) {
+        el('p', 'pod-empty', panel, 'No companions yet. Find your family and help the dolphins, and they will swim with you!');
+        return;
+      }
+      el('p', 'points-line pod-intro', panel, 'Choose who swims with you. Resting companions wait at home until you call them.');
+      for (const comp of list) {
+        const with_ = family.following(comp.id);
+        const row = el('div', 'shop-row', panel);
+        const info = el('div', 'shop-info', row);
+        el('div', 'shop-name', info, comp.name);
+        el('div', 'shop-text', info, with_ ? 'Swimming with you' : 'Resting at home');
+        const btn = el('button', `btn btn-small ${with_ ? '' : 'btn-primary'}`, row, with_ ? 'Let rest' : 'Call back');
+        btn.type = 'button';
+        btn.addEventListener('click', () => {
+          if (with_) family.rest(comp.id);
+          else {
+            family.wake(comp.id);
+            game.hud.showToast(`${comp.name.replace(/ \(.*\)/, '')} ${comp.id === 'dolphins' ? 'are' : 'is'} coming back!`);
+          }
+          show('pod');
+        });
+      }
+      const allRow = el('div', 'pod-all', panel);
+      const alone = el('button', 'btn', allRow, 'Swim alone');
+      alone.type = 'button';
+      alone.disabled = list.every((c) => !family.following(c.id));
+      alone.addEventListener('click', () => {
+        family.restAll();
+        show('pod');
+      });
+      const everyone = el('button', 'btn btn-primary', allRow, 'Call everyone');
+      everyone.type = 'button';
+      everyone.disabled = list.every((c) => family.following(c.id));
+      everyone.addEventListener('click', () => {
+        family.callAll();
+        show('pod');
       });
     }
 
