@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#071a22" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Orca" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="icon" href="/icon-192.png" />
+    <title>Orca</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <style>
+      /* Inline so the loading screen shows before any script or stylesheet arrives. */
+      #loading {
+        position: fixed;
+        inset: 0;
+        z-index: 2000; /* above the lil-gui panel */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 16px;
+        background: radial-gradient(ellipse at 50% 40%, #12424a 0%, #071a22 60%, #030b10 100%);
+        color: #e6f0f0;
+        font: 15px/1.5 ui-sans-serif, system-ui, sans-serif;
+        text-align: center;
+        transition: opacity 0.9s ease;
+      }
+      #loading.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading" role="status" aria-live="polite">
+      <div class="loading-scene" aria-hidden="true">
+        <svg class="loading-orca" viewBox="0 0 200 70">
+          <path fill="#0b0c0f" d="M100 31 C104 18 108 8 113 4 C114 14 118 24 127 33 Z" />
+          <path fill="#0b0c0f" d="M24 50 L5 37 L12 48 L3 61 Z" />
+          <path fill="#0b0c0f" d="M10 47 C30 34 70 28 120 32 C150 34 178 40 194 48 C178 57 150 61 120 61 C80 61 40 57 22 51 Z" />
+          <path fill="#e9eef0" d="M118 61 C150 61 176 57 192 50 C172 53 150 56 118 56 C100 56 82 58 70 60 C90 61 104 61 118 61 Z" />
+          <ellipse fill="#e9eef0" cx="166" cy="42" rx="9" ry="3.2" />
+          <path fill="#5a6168" d="M92 34 C100 30 120 30 130 34 C120 37 104 37 92 34 Z" />
+        </svg>
+        <svg class="loading-wave" viewBox="0 0 240 20" preserveAspectRatio="none">
+          <path d="M0 10 Q15 2 30 10 T60 10 T90 10 T120 10 T150 10 T180 10 T210 10 T240 10 T270 10 T300 10 T330 10 T360 10" />
+        </svg>
+      </div>
+      <h1 class="loading-title">Orca</h1>
+      <p class="loading-subtitle">Guardian of the Ocean</p>
+      <div class="loading-bar" aria-hidden="true"><div class="loading-fill"></div></div>
+      <p class="loading-step">Getting ready…</p>
+      <div class="loading-menu" hidden>
+        <button class="loading-start" type="button" data-choice="continue">Continue</button>
+        <button class="loading-start" type="button" data-choice="new">Start swimming</button>
+        <button class="loading-secondary" type="button" data-choice="settings">Settings</button>
+      </div>
+      <form class="loading-name" hidden>
+        <label for="orca-name">What is your orca's name?</label>
+        <input id="orca-name" class="name-input" maxlength="16" autocomplete="off" placeholder="Orca name" />
+        <button class="loading-start" type="submit">Let's swim!</button>
+      </form>
+      <p class="loading-fact"></p>
+    </div>
+    <div class="rotate-notice" aria-live="polite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
+      <p>Turn your iPad sideways to play</p>
+    </div>
+    <div id="hint"><kbd>W</kbd><kbd>S</kbd> swim · <kbd>A</kbd><kbd>D</kbd> turn · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> rise · <kbd>C</kbd> dive · <kbd>J</kbd> jump · <kbd>F</kbd> action · <kbd>E</kbd> tail slap · <kbd>Q</kbd> spyhop · <kbd>V</kbd> call · drag to look · <kbd>M</kbd> map · <kbd>Esc</kbd> pause</div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
