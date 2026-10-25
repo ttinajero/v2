@@ -28,6 +28,8 @@ export class Waves {
     this.chop = 0.85;
     this.scale = 1;
     this.dirs = WAVES.map(() => new THREE.Vector2());
+    // Per-wave strength: the sea state system shifts these to make calm, choppy or swell seas.
+    this.weights = WAVES.map(() => 1);
     this.fadeOrigin = new THREE.Vector3(); // camera position: far short waves fade like on the GPU
     this._disp = new THREE.Vector3();
     this._tan = new THREE.Vector3();
@@ -43,7 +45,7 @@ export class Waves {
     const [, steepness, wavelength] = WAVES[i];
     const L = wavelength * this.scale;
     const camDist = Math.hypot(x - this.fadeOrigin.x, z - this.fadeOrigin.z);
-    const steep = steepness * this.chop * (1 - smoothstep(camDist, L * 25, L * 90));
+    const steep = steepness * this.weights[i] * this.chop * (1 - smoothstep(camDist, L * 25, L * 90));
     const k = TAU / L;
     const c = Math.sqrt(G / k);
     const d = this.dirs[i];
@@ -106,12 +108,18 @@ export class Waves {
     return out;
   }
 
+  // Keeps the summed steepness below 1 so crests never fold over, whatever the sea state.
+  clampChop(max = 0.95) {
+    const total = WAVES.reduce((sum, [, steepness], i) => sum + steepness * this.weights[i], 0) * this.chop;
+    if (total > max) this.chop *= max / total;
+  }
+
   writeUniforms(uniforms) {
     uniforms.uTime.value = this.time;
     uniforms.uChop.value = this.chop;
     uniforms.uScale.value = this.scale;
     WAVES.forEach(([, steepness, wavelength], i) => {
-      uniforms.uWaves.value[i].set(this.dirs[i].x, this.dirs[i].y, steepness, wavelength);
+      uniforms.uWaves.value[i].set(this.dirs[i].x, this.dirs[i].y, steepness * this.weights[i], wavelength);
     });
     uniforms.uWind.value.copy(this.dirs[0]);
   }

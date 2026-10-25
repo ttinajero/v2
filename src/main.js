@@ -27,6 +27,7 @@ import { createTutorial } from './tutorial.js';
 import { createUpdates } from './updates.js';
 import { createEvents } from './events.js';
 import { createTricks } from './tricks.js';
+import { createSea } from './sea.js';
 import { speciesById } from './species.js';
 import { water } from './materials.js';
 import { loadingStep, loadingReady, loadingFailed } from './loading.js';
@@ -277,6 +278,7 @@ const params = {
   exposure: 1.05,
 };
 game.params = params;
+game.sea = game.addSystem(createSea(game)); // changes the sea state every few minutes
 
 waves.setWind(THREE.MathUtils.degToRad(params.wind));
 game.openMainMenu = () => {
@@ -500,6 +502,7 @@ function frame() {
   }
 
   waves.chop = params.chop + (game.extraChop || 0); // events (the sea monster) can stir the sea
+  waves.clampChop();
   waves.scale = params.scale;
   waves.fadeOrigin.copy(camera.position);
 

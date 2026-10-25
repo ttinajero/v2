@@ -7,5 +7,6 @@
     "monster": 0.06
   },
   "nightDangerMultiplier": 2,
+  "seaChangeSeconds": 180,
   "message": null
 }

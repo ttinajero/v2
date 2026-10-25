@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { createOrca } from './orca.js';
 import { water } from './materials.js';
+import { WORLD_HALF } from './world.js';
+
+const LEASH = 35; // waiting family members stay this close to their spot
+const LIMIT = WORLD_HALF - 60; // and always well inside the map
 
 // The orca's family: found in the "Find Your Family" mission, then they swim along.
 export const FAMILY = [
@@ -35,11 +39,19 @@ class FamilyOrca {
       const want = Math.atan2(target.x - p.x, target.z - p.z);
       this.heading += THREE.MathUtils.clamp(wrap(want - this.heading), -1.6 * dt, 1.6 * dt);
     } else {
-      this.heading += Math.sin(this.game.time * 0.2 + this.phase) * 0.3 * dt; // idle circling
+      const home = this.member.spot;
+      if (Math.hypot(home.x - p.x, home.z - p.z) > LEASH) {
+        // Drifted too far while waiting: swim back to the spot, briskly.
+        const want = Math.atan2(home.x - p.x, home.z - p.z);
+        this.heading += THREE.MathUtils.clamp(wrap(want - this.heading), -1.2 * dt, 1.2 * dt);
+        speed = Math.max(speed, 6);
+      } else {
+        this.heading += Math.sin(this.game.time * 0.2 + this.phase) * 0.3 * dt; // idle circling
+      }
     }
     this.speed = THREE.MathUtils.lerp(this.speed, speed, 1 - Math.exp(-1.5 * dt));
-    p.x += Math.sin(this.heading) * this.speed * dt;
-    p.z += Math.cos(this.heading) * this.speed * dt;
+    p.x = THREE.MathUtils.clamp(p.x + Math.sin(this.heading) * this.speed * dt, -LIMIT, LIMIT);
+    p.z = THREE.MathUtils.clamp(p.z + Math.cos(this.heading) * this.speed * dt, -LIMIT, LIMIT);
     this.jump = Math.max(0, this.jump - dt * 0.8);
     this.leap = Math.sin((1 - this.jump) * Math.PI) * (this.jump > 0 ? 4 : 0);
     const surface = this.game.waves.heightAt(p.x, p.z);
